@@ -46,6 +46,7 @@ const server = http.createServer(app);
 app.use(express.json());
 
 // Enable CORS for all incoming HTTP requests
+// Enable CORS for all HTTP requests
 app.use(
   cors({
     origin: "*", // Allow all origins
@@ -58,10 +59,10 @@ app.use(
 // Enable CORS for Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // Allow requests from the frontend
-    methods: ["GET", "POST"], // Allow GET and POST methods
-    allowedHeaders: ["Content-Type"], // Optionally add headers if needed
-    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+    origin: "*", // Allow all origins for Socket.IO
+    methods: ["GET", "POST"], // Allow specific methods
+    allowedHeaders: ["Content-Type"], // Specify allowed headers
+    credentials: true, // Allow credentials
   },
 });
 
