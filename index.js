@@ -137,6 +137,7 @@ app.get("/", (req, res) => {
 });
 
 // Route to get the current hold status for a specific movie showtime
+// Route to get the current hold status for a specific movie showtime
 app.get("/seating/:movieId_date_showtime", (req, res) => {
   try {
     const { movieId_date_showtime } = req.params;
@@ -147,22 +148,24 @@ app.get("/seating/:movieId_date_showtime", (req, res) => {
     // Construct the finalId to retrieve the seating data
     const finalId = `${movieId}_${date}_${showtime}`;
 
-    // Check if data exists for the finalId
+    if(finalId === movieId_date_showtime) console.log("HAHA")
+
+    // Check if data already exists for the finalId
     if (seatsData[finalId]) {
+      // If data exists, just return it
       res.json({ data: seatsData[finalId] });
-      console.log("New data Send1");
+      console.log("Existing data sent for", finalId);
     } else {
+      // If no data exists, create new data and store it
       seatsData[finalId] = getRandomSeatingData();
-      //   console.log(seatsData[finalId]);
-      console.log("New Data sent2");
+      console.log("New data sent for", finalId);
       res.json({ data: seatsData[finalId] });
     }
   } catch (error) {
-    res
-      .status(500)
-      .send({ message: "Internal Server Error", error: error.message });
+    res.status(500).send({ message: "Internal Server Error", error: error.message });
   }
 });
+
 
 // Start the server
 const port = process.env.PORT || 8080;
