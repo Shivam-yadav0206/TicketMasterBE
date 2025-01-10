@@ -18,7 +18,6 @@ import cors from "cors";
 // Mock Data for Seats (No DB interaction, just in-memory)
 let seatsData = {};
 
-
 const seatingDataList = [
   seatingData1,
   seatingData2,
@@ -49,7 +48,18 @@ app.use(express.json());
 // Enable CORS for all HTTP requests
 app.use(
   cors({
-    origin: "*", // Allow all origins
+    origin: (origin, callback) => {
+      // Allow all origins or specific origins
+      if (
+        origin === undefined ||
+        origin === "http://localhost:3000" ||
+        origin === "https://ticket-master-gilt.vercel.app"
+      ) {
+        callback(null, true); // Allow the origin
+      } else {
+        callback(new Error("Not allowed by CORS"), false); // Reject others
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE"], // Allow specific HTTP methods
     allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
@@ -59,7 +69,18 @@ app.use(
 // Enable CORS for Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins for Socket.IO
+    origin: (origin, callback) => {
+      // Allow all origins or specific origins
+      if (
+        origin === undefined ||
+        origin === "http://localhost:3000" ||
+        origin === "https://ticket-master-gilt.vercel.app"
+      ) {
+        callback(null, true); // Allow the origin
+      } else {
+        callback(new Error("Not allowed by CORS"), false); // Reject others
+      }
+    },
     methods: ["GET", "POST"], // Allow specific methods
     allowedHeaders: ["Content-Type"], // Specify allowed headers
     credentials: true, // Allow credentials
@@ -139,7 +160,9 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/", (req, res) => { res.json("Server running"); }); 
+app.get("/", (req, res) => {
+  res.json("Server running");
+});
 
 // Route to get the current hold status for a specific movie showtime
 app.get("/seating/:movieId_date_showtime", (req, res) => {
