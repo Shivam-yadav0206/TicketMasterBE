@@ -51,20 +51,21 @@ app.use(
     origin: (origin, callback) => {
       // Allow all origins or specific origins
       if (
-        origin === undefined ||
-        origin === "http://localhost:3000" ||
-        origin === "https://ticket-master-gilt.vercel.app"
+        origin === undefined || // For local requests (like Postman)
+        origin === "http://localhost:3000" || // Your local dev URL
+        origin === "https://ticket-master-gilt.vercel.app" // Your production URL
       ) {
         callback(null, true); // Allow the origin
       } else {
         callback(new Error("Not allowed by CORS"), false); // Reject others
       }
     },
-    methods: ["GET", "POST", "PUT", "DELETE"], // Allow specific HTTP methods
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow specific HTTP methods
     allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   })
 );
+
 
 // Enable CORS for Socket.IO
 const io = new Server(server, {
