@@ -17,7 +17,6 @@ import {
 import cors from "cors";
 import mongoose from "mongoose";
 
-
 dotenv.config();
 
 // Create model based on the schema
@@ -162,7 +161,6 @@ app.get("/", (req, res) => {
 app.get("/seating/:movieId_date_showtime", async (req, res) => {
   try {
     const { movieId_date_showtime } = req.params;
-    console.log("qwertggh")
 
     // Construct the finalId to retrieve the seating data
     const finalId = movieId_date_showtime;
@@ -170,21 +168,26 @@ app.get("/seating/:movieId_date_showtime", async (req, res) => {
     const seatingRecord = await SeatingData.findOne({ finalId });
 
     console.log(finalId, seatingRecord);
+
+    if (seatsData[finalId]) {
+      res.json({ data: seatsData[finalId] });
+    }
     // Check if data already exists for the finalId
-    if (seatingRecord) {
+    else if (seatingRecord) {
       // If data exists, just return it
       res.json({ data: seatingDataList[seatingRecord.seatingDataNumber] });
+      seatsData[finalId] = seatingDataList[seatingRecord.seatingDataNumber];
       console.log("Existing data sent for", finalId);
     } else {
       // If no data exists, create new data and store it
-      const index = Math.floor(Math.random() * seatingDataList.length); 
- 
+      const index = Math.floor(Math.random() * seatingDataList.length);
 
       // Save the new seating data to MongoDB
       const newSeatingRecord = new SeatingData({
         finalId,
         seatingDataNumber: index,
       });
+      seatsData[finalId] = seatingDataList[index];
 
       await newSeatingRecord.save();
       console.log("New data created and saved for", finalId);
@@ -192,11 +195,12 @@ app.get("/seating/:movieId_date_showtime", async (req, res) => {
       res.json({ data: seatingDataList[index] });
     }
   } catch (error) {
-    res.status(500).send({ message: "Internal Server Error", error: error.message });
+    res
+      .status(500)
+      .send({ message: "Internal Server Error", error: error.message });
     console.log(error.message);
   }
 });
-
 
 // Start the server
 const port = process.env.PORT || 8080;
