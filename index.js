@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
+import dotenv from "dotenv";
 import {
   seatingData1,
   seatingData2,
@@ -14,6 +15,12 @@ import {
   seatingData10,
 } from "./constant.js";
 import cors from "cors";
+import mongoose from "mongoose";
+
+
+dotenv.config();
+
+// Create model based on the schema
 
 // Mock Data for Seats (No DB interaction, just in-memory)
 let seatsData = {};
@@ -44,10 +51,25 @@ const server = http.createServer(app);
 // Parse JSON requests
 app.use(express.json());
 
-// Enable CORS for all incoming HTTP requests
+const connectDb = async () => {
+  try {
+    const connect = await mongoose.connect(process.env.CONNECTION_STRING);
+    console.log("Database Connected: ", connect.connection.name);
+  } catch (err) {
+    console.log(err);
+    process.exit(1);
+  }
+};
+
+const seatingSchema = new mongoose.Schema({
+  finalId: { type: String, required: true, unique: true },
+  seatingDataNumber: { type: Number, required: true },
+});
+
+const SeatingData = mongoose.model("SeatingData", seatingSchema);
+connectDb();
 // Enable CORS for all HTTP requests
 app.use(cors());
-
 
 // Enable CORS for Socket.IO
 const io = new Server(server, {
@@ -137,32 +159,41 @@ app.get("/", (req, res) => {
 });
 
 // Route to get the current hold status for a specific movie showtime
-// Route to get the current hold status for a specific movie showtime
-app.get("/seating/:movieId_date_showtime", (req, res) => {
+app.get("/seating/:movieId_date_showtime", async (req, res) => {
   try {
     const { movieId_date_showtime } = req.params;
-
-    // Split the movieId_date_showtime by underscore to extract movieId, date, and showtime
-    const [movieId, date, showtime] = movieId_date_showtime.split("_");
+    console.log("qwertggh")
 
     // Construct the finalId to retrieve the seating data
-    const finalId = `${movieId}_${date}_${showtime}`;
+    const finalId = movieId_date_showtime;
 
-    if(finalId === movieId_date_showtime) console.log("HAHA")
+    const seatingRecord = await SeatingData.findOne({ finalId });
 
+    console.log(finalId, seatingRecord);
     // Check if data already exists for the finalId
-    if (seatsData[finalId]) {
+    if (seatingRecord) {
       // If data exists, just return it
-      res.json({ data: seatsData[finalId] });
+      res.json({ data: seatingDataList[seatingRecord.seatingDataNumber] });
       console.log("Existing data sent for", finalId);
     } else {
       // If no data exists, create new data and store it
-      seatsData[finalId] = getRandomSeatingData();
-      console.log("New data sent for", finalId);
-      res.json({ data: seatsData[finalId] });
+      const index = Math.floor(Math.random() * seatingDataList.length); 
+ 
+
+      // Save the new seating data to MongoDB
+      const newSeatingRecord = new SeatingData({
+        finalId,
+        seatingDataNumber: index,
+      });
+
+      await newSeatingRecord.save();
+      console.log("New data created and saved for", finalId);
+
+      res.json({ data: seatingDataList[index] });
     }
   } catch (error) {
     res.status(500).send({ message: "Internal Server Error", error: error.message });
+    console.log(error.message);
   }
 });
 
