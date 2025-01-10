@@ -138,6 +138,8 @@ io.on("connection", (socket) => {
   });
 });
 
+app.get("/", (req, res) => { res.json("Server running"); }); 
+
 // Route to get the current hold status for a specific movie showtime
 app.get("/seating/:movieId_date_showtime", (req, res) => {
   try {
@@ -171,32 +173,3 @@ const port = process.env.PORT || 8080;
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
-// socket.on("releaseSeat", (seat, movieId) => {
-//   const finalId = movieId;
-//   if (seatsData[finalId] && !seatsData[finalId]?.hold.includes(seat)) {
-//     socket.emit("releaseError", `Seat ${seat} is not on hold.`);
-//     return;
-//   }
-
-//   // Add the seat to the hold list
-//   if (!seatsData[finalId]) {
-//     seatsData[finalId] = seatingData2;
-//   }
-
-//   // Removing the seat if it is present
-//   seatsData[finalId].hold = seatsData[finalId].hold.filter(
-//     (heldSeat) => heldSeat !== seat
-//   );
-
-//   console.log(seatsData[finalId].hold);
-//   // Broadcast the release event to all clients in the room
-//   io.to(finalId).emit("ticket:release", seatsData[finalId].hold);
-//   // io.to(finalId).emit("ticket:hold", seatsData[finalId].hold);
-//   console.log(
-//     `Broadcasting hold seats to room ${finalId}:`,
-//     seatsData[finalId].hold
-//   );
-
-//   socket.emit("releaseSuccess", `Seat ${seat} is now released.`);
-// });
