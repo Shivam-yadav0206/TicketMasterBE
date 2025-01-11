@@ -16,6 +16,7 @@ import {
 } from "./constant.js";
 import cors from "cors";
 import mongoose from "mongoose";
+import Pusher from "pusher";
 
 dotenv.config();
 
@@ -37,6 +38,13 @@ const seatingDataList = [
   seatingData10,
 ];
 
+const pusherServer = new Pusher({
+  appId: process.env.API_ID, // Use the appId from the environment variable
+  key: process.env.PUSHER_KEY, // It's a good idea to store other sensitive keys in the .env as well
+  secret: process.env.PUSHER_SECRET, // Store your secret in the .env for security
+  cluster: "ap2",
+  useTLS: true, // Ensures secure connections
+});
 // Function to get random seating data
 const getRandomSeatingData = () => {
   const randomIndex = Math.floor(Math.random() * seatingDataList.length);
@@ -76,6 +84,7 @@ const io = new Server(server, {
     origin: "*", // Allow all origins
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Allow all HTTP methods
     allowedHeaders: ["*"], // Allow all headers
+    transports: ["websocket", "polling"], // Explicitly specify transports
     credentials: true, // Allow credentials (cookies, etc.)
   },
 });
@@ -155,6 +164,30 @@ io.on("connection", (socket) => {
 
 app.get("/", (req, res) => {
   res.json("Server running");
+});
+
+app.post("/seatUpdates", async (req, res) => {
+  const { channel, event, data } = req.body;
+
+  // Check if the required fields are present in the request
+  if (!channel || !event || !data) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    // Trigger the event on the specified channel
+    await pusherServer.trigger(channel, event, { ...data, event: event });
+    //console.log(`Event triggered on channel ${channel}: ${event}`, data);
+
+    return res.status(200).json({
+      seat: data,
+      event: event,
+      message: "Event triggered successfully",
+    });
+  } catch (error) {
+    console.error("Error triggering event:", error);
+    return res.status(500).json({ error: "Failed to trigger event" });
+  }
 });
 
 // Route to get the current hold status for a specific movie showtime
