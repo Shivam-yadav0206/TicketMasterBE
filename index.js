@@ -66,7 +66,16 @@ const seatingSchema = new mongoose.Schema({
 const SeatingData = mongoose.model("SeatingData", seatingSchema);
 connectDb();
 // Enable CORS for all HTTP requests
-app.use(cors());
+app.use(
+  cors({
+    origin: "*", // Allow all origins
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Include OPTIONS for preflight
+    allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers
+    credentials: true, // Allow credentials
+  })
+);
+
+app.options("*", cors()); // Handle preflight requests
 
 
 app.get("/", (req, res) => {
