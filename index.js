@@ -1,6 +1,5 @@
 import express from "express";
 import http from "http";
-import { Server } from "socket.io";
 import dotenv from "dotenv";
 import {
   seatingData1,
@@ -20,11 +19,6 @@ import Pusher from "pusher";
 
 dotenv.config();
 
-// Create model based on the schema
-
-// Mock Data for Seats (No DB interaction, just in-memory)
-let seatsData = {};
-
 const seatingDataList = [
   seatingData1,
   seatingData2,
@@ -39,17 +33,13 @@ const seatingDataList = [
 ];
 
 const pusherServer = new Pusher({
-  appId: process.env.API_ID, // Use the appId from the environment variable
+  appId: process.env.APP_ID, // Use the appId from the environment variable
   key: process.env.PUSHER_KEY, // It's a good idea to store other sensitive keys in the .env as well
   secret: process.env.PUSHER_SECRET, // Store your secret in the .env for security
   cluster: "ap2",
   useTLS: true, // Ensures secure connections
 });
 // Function to get random seating data
-const getRandomSeatingData = () => {
-  const randomIndex = Math.floor(Math.random() * seatingDataList.length);
-  return seatingDataList[randomIndex];
-};
 
 // Create Express app
 const app = express();
@@ -78,89 +68,6 @@ connectDb();
 // Enable CORS for all HTTP requests
 app.use(cors());
 
-// Enable CORS for Socket.IO
-const io = new Server(server, {
-  cors: {
-    origin: "*", // Allow all origins
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Allow all HTTP methods
-    allowedHeaders: ["*"], // Allow all headers
-    transports: ["websocket", "polling"], // Explicitly specify transports
-    credentials: true, // Allow credentials (cookies, etc.)
-  },
-});
-
-// WebSocket connection handling
-io.on("connection", (socket) => {
-  console.log("New client connected");
-
-  // Join a room based on finalId (movieId_date_showtime)
-  socket.on("joinRoom", (finalId) => {
-    socket.join(finalId);
-    console.log(`User joined room: ${finalId}`);
-
-    // Send current hold data when a new user joins
-    if (seatsData[finalId]) {
-      socket.emit("seating:status", seatsData[finalId].hold);
-    }
-
-    // Handle disconnection
-    socket.on("disconnect", () => {
-      console.log("Client disconnected");
-      socket.leave(finalId); // Leave the room when client disconnects
-    });
-  });
-
-  // Handle seat hold event
-  socket.on("holdSeat", (seat, movieId) => {
-    const finalId = movieId;
-
-    // Check if the seat is already on hold
-    if (seatsData[finalId] && seatsData[finalId].hold.includes(seat)) {
-      socket.emit("holdError", `Seat ${seat} is already on hold.`);
-      return;
-    }
-
-    // Add the seat to the hold list
-    if (!seatsData[finalId]) {
-      seatsData[finalId] = getRandomSeatingData();
-    }
-    seatsData[finalId].hold.push(seat);
-    console.log(seatsData[finalId].hold);
-    // Broadcast the hold event to all clients in the room
-    io.to(finalId).emit("ticket:hold", seatsData[finalId].hold);
-    // io.to(finalId).emit("ticket:hold", seatsData[finalId].hold);
-    console.log(
-      `Broadcasting hold seats to room ${finalId}:`,
-      seatsData[finalId].hold
-    );
-
-    socket.emit("holdSuccess", `Seat ${seat} is now on hold.`);
-  });
-
-  socket.on("releaseSeat", (seat, movieId) => {
-    const finalId = movieId;
-
-    // Check if the seat is currently on hold
-    if (seatsData[finalId] && seatsData[finalId].hold.includes(seat)) {
-      // Remove the seat from the hold list
-      seatsData[finalId].hold = seatsData[finalId].hold.filter(
-        (s) => s !== seat
-      );
-      console.log(`Seat ${seat} released from room ${finalId}`);
-
-      // Broadcast the updated hold data to all clients in the room
-      io.to(finalId).emit("ticket:release", seatsData[finalId].hold);
-      console.log(
-        `Broadcasting released seats to room ${finalId}:`,
-        seatsData[finalId].hold
-      );
-
-      socket.emit("releaseSuccess", `Seat ${seat} is now released.`);
-    } else {
-      socket.emit("releaseError", `Seat ${seat} is not currently on hold.`);
-    }
-  });
-});
 
 app.get("/", (req, res) => {
   res.json("Server running");
@@ -200,17 +107,13 @@ app.get("/seating/:movieId_date_showtime", async (req, res) => {
 
     const seatingRecord = await SeatingData.findOne({ finalId });
 
-    console.log(finalId, seatingRecord);
+    //console.log(finalId, seatingRecord);
 
-    if (seatsData[finalId]) {
-      res.json({ data: seatsData[finalId] });
-    }
     // Check if data already exists for the finalId
-    else if (seatingRecord) {
+    if (seatingRecord) {
       // If data exists, just return it
       res.json({ data: seatingDataList[seatingRecord.seatingDataNumber] });
-      seatsData[finalId] = seatingDataList[seatingRecord.seatingDataNumber];
-      console.log("Existing data sent for", finalId);
+      //console.log("Existing data sent for", finalId);
     } else {
       // If no data exists, create new data and store it
       const index = Math.floor(Math.random() * seatingDataList.length);
@@ -220,10 +123,10 @@ app.get("/seating/:movieId_date_showtime", async (req, res) => {
         finalId,
         seatingDataNumber: index,
       });
-      seatsData[finalId] = seatingDataList[index];
+      //seatsData[finalId] = seatingDataList[index];
 
       await newSeatingRecord.save();
-      console.log("New data created and saved for", finalId);
+      //console.log("New data created and saved for", finalId);
 
       res.json({ data: seatingDataList[index] });
     }
